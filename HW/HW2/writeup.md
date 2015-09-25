@@ -17,7 +17,7 @@ En A0 A1| O0 O1 O2 O3 | Expected Output
 ```
 ### Waveforms
 
-![decoder waveforms](/images/decoder.png)
+![decoder waveforms](images/decoder.png)
 
 ## Multiplexor
 
@@ -36,7 +36,7 @@ A1 A0 | I3 I2 I1 I0 | Out | Expected Output
 This test bench only shows 8 different inputs although there are actually 2<sup>6</sup> = 64 possible permutations of inputs. Only 8 are needed because A0 and A1 dictate which input (I0, I1, I2, I3) will be the output, and only the value of that input affects the value of the output. For example, take the first two rows of the truth table. When A1 and A0 read 00 (binary for d0), respectively, the output will reflect only the value of I0. In the third and fourth rows, A1 and A0 read 01 (binary for d1). The outputs for these rows reflect only the value of I1. The Xs in the truth table represent the fact that the value of those inputs will not affect the output, given the other inputs (basically, wherever there is an X, that input could be set to either high or low and would not affect the output).
 ### Waveforms
 
-![decoder waveforms](/images/multiplexer.png)
+![decoder waveforms](images/multiplexer.png)
 
 ## Adder
 
@@ -53,4 +53,4 @@ A B Cin | S Cout | Expected Output
 1  1  1 | 1   1  | Both
 ```
 ### Waveforms
-![decoder waveforms](/images/adder.png)
+![decoder waveforms](images/adder.png)

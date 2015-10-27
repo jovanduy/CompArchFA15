@@ -1,6 +1,6 @@
 decoders.v
 mux32to1by32.v
-regfile.t.v
-regfile.v
 register32.v
 register32zero.v
+regfile.v
+regfile.t.v

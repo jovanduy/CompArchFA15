@@ -8,7 +8,7 @@ module register32zero
 
 	always @(posedge clk) begin
 		if(wrenable) begin
-			assign q = 32'b0;
+			q = 32'b0;
 		end
 	end
 endmodule

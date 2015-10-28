@@ -18,14 +18,13 @@ module regfile
 	input			Clk		// Clock (Positive Edge Triggered)
 );
 	wire[31:0] wrenable;
-
 	decoder1to32 decoder(wrenable, RegWrite, WriteRegister);
 
 	wire[31:0] regOut[31:0];
 	register32zero regZero(regOut[0], WriteData, wrenable[0], Clk);
 
+	genvar i;
 	generate
-		genvar i;
 		for (i=1; i<32; i=i+1) begin : regGenerator
 			register32 reg32(regOut[i], WriteData, wrenable[i], Clk);
 		end

@@ -57,11 +57,11 @@ The overall top-level view of the circuit consists of a few main parts.
 | Subcomponent         | Cost per | # Used | Total |
 | ----                 | ---      | ---    | ---   |
 | System Clock         | 2        | 1      | 2     |
-| Input Conditioner    | 175      | 1      | 175   |
+| Input Conditioner    | 130      | 1      | 142   |
 | Finite State Machine | 25       | 1      | 25    |
 | Frequency Divider    | 182      | 1      | 182   |
 | 4 to 1 Multiplexer   | 23       | 1      | 23    |
-|                      |          |        | 407   |
+|                      |          |        | 338   |
 
 ## 2.2 Component Schematic
 
@@ -72,7 +72,7 @@ See the Schematics section (below) to view more in depth schematics of component
 ## 3.1 Input Conditioner
 
 ### 3.1.1 Specification
-The input conditioner takes in the clock and the raw, noisy button signal as inputs and calculates a conditioned version of the button input signal. Assuming button noise/debouncing decays within 1 millisecond, this input conditioner uses two synchronizing D flip flops and a counter to track if the raw input signal has been high for at least 1 millisecond. This 1 millisecond wait time is tracked by having the counter count to 5. Since the clock has a frequency of 32,768 Hz, its period is 1/2<sup>15</sup> seconds. Multiplying this period by 2<sup>5</sup> yields 0.0009765625 seconds, which is approximately 1 millisecond. The output is only the positive edge of the conditioned signal because if it were the conditioned signal itself, the FSM would quickly keep moving to the next state on the next clock cycle as long as conditioned were high. Just outputting the positive edge only allows the FSM to switch stages once per button press.
+The input conditioner takes in the clock and the raw, noisy button signal as inputs and calculates a conditioned version of the button input signal. Assuming button noise/debouncing decays within 1 millisecond, this input conditioner uses two synchronizing D flip flops and a counter to track if the raw input signal has been high for at least 1 millisecond. This 1 millisecond wait time is tracked by having the counter count to 2<sup>5</sup>. Since the clock has a frequency of 32,768 Hz, its period is 1/2<sup>15</sup> seconds. Multiplying this period by 2<sup>5</sup> yields 0.0009765625 seconds, which is approximately 1 millisecond. The output is only the positive edge of the conditioned signal because if it were the conditioned signal itself, the FSM would quickly keep moving to the next state on the next clock cycle as long as conditioned were high. Just outputting the positive edge only allows the FSM to switch stages once per button press.
 
 ### 3.1.2 Inputs
 
@@ -94,28 +94,81 @@ Inputs **clk** as the clock signal and **input** as the noisy signal to conditio
 | 2:1 Multiplexer             | 10       | 1      | 10    |
 | 2 XOR                       | 2+1 = 3  | 1      | 3     |
 | 2 AND                       | 2+1 = 3  | 2      | 6     |
-| 5 Stage Ring Counter        | 21*5-1 = 104  | 1  | 104  |
-|                             |          |        | 175   |
+| 5 Bit Up Counter            | 13*5-6 = 59  | 1  | 59    |
+| 5 AND                       | 5+1 = 6  | 2      | 12     |
+|                             |          |        | 142   |
 
-## 3.2 Finite State Machine
+## 3.2 N Bit Up Counter
 
 ### 3.2.1 Specification
 
-The finite state machine (FSM) allows rotation between four states. The state is encoded as a 2-bit binary number. The FSM functions similarly to a 2-bit adder, but with no carryout.
+Uses binary encoding to count up to 2<sup>N</sup>, where N is the number of JK flip flops used. On every rising clock edge, if the input is high, the count increases by one (or resets to 0 if the count is at 2<sup>N</sup>). This design uses multiple JK Flip Flops with the same input for J and K to allow toggling functionality (like a T flip flop).
 
 ### 3.2.2 Inputs
 
-**clk** is the clock input. **in** is the input which allows the FSM to decide which state to move to next. In the bike light, **in** is the output of the input conditioner.
+**input** is the input signal and **clk** is the clock signal.
 
 ### 3.2.3 Outputs
 
-**state[0]** and **state[1]** are the least significant and most significant bits, respectively, of the binary encoded state (from b00 to b11).
+**Q** is the output. **Q** is N bits, with **Q0** being the least significant bit of the output and **QN** being the most significant bit.
 
 ### 3.2.4 Schematic
 
-![FSM](images/finiteStateMachine.png)
+![up counter](images/upCounter.png)
 
 ### 3.2.5 Cost
+
+| Subcomponent                | Cost per | # Used | Total |
+| ----                        | ---      | ---    | ---   |
+| Positive Edge Triggered JK Flip Flop | 10       | N      | 10N    |
+| 2AND                        | 2+1 = 3  | N-2    | 3*(N-2) |
+|                             |          |        | 13N-6  |
+
+## 3.3 Positive Edge Triggered JK Flip Flop
+
+### 3.3.1 Specification
+
+This is used only as a T flip flop. If both the J and K inputs are set to high, then the output Q toggles.
+
+### 3.3.2 Inputs
+
+**J** and **K** are the inputs. **Clk** is the clock input.
+
+### 3.3.3 Outputs
+
+**Q** is the output, while **~Q** is the opposite of **Q**.
+
+### 3.3.4 Schematic
+
+![jkff](images/jkff.png)
+
+### 3.3.5 Cost
+
+| Subcomponent                | Cost per | # Used | Total |
+| ----                        | ---      | ---    | ---   |
+| 3NAND                       | 3        | 2      | 6     |
+| 2NAND                       | 2        | 2      | 4     |
+|                             |          |        | 10    |
+
+## 3.4 Finite State Machine
+
+### 3.4.1 Specification
+
+The finite state machine (FSM) allows rotation between four states. The state is encoded as a 2-bit binary number. The FSM functions similarly to a 2-bit adder, but with no carryout.
+
+### 3.4.2 Inputs
+
+**clk** is the clock input. **in** is the input which allows the FSM to decide which state to move to next. In the bike light, **in** is the output of the input conditioner.
+
+### 3.4.3 Outputs
+
+**state[0]** and **state[1]** are the least significant and most significant bits, respectively, of the binary encoded state (from b00 to b11).
+
+### 3.4.4 Schematic
+
+![FSM](images/finiteStateMachine.png)
+
+### 3.4.5 Cost
 
 | Subcomponent                | Cost per | # Used | Total |
 | ----                        | ---      | ---    | ---   |
@@ -124,50 +177,50 @@ The finite state machine (FSM) allows rotation between four states. The state is
 | Positive Edge Triggered DFF | 13       | 2      | 13    |
 |                             |          |        | 25    |
 
-## 3.3 Frequency Divider
+## 3.5 Frequency Divider
 
-### 3.3.1 Specification
+### 3.5.1 Specification
 
 The frequency divider divides the frequency of an input clock signal by 2<sup>n</sup>, where n is the number of positive edge triggered D flip flops being used. For the bike light, this is used both to set the frequency of the blinking state (2Hz) and is used as PWM to set the frequency for the dim state (128 Hz). Since the clock generates a frequency of 32,768 Hz, the blinking state takes output after the 14th dff (32,768 = 2<sup>15</sup>, so 2<sup>15</sup>/2<sup>14</sup> = 2), and the dim state takes output after the 8th dff (2<sup>15</sup>/2<sup>8</sup> = 128).
 
-### 3.3.2 Inputs
+### 3.5.2 Inputs
 
 **clk** is the signal which will have its frequency divided by a power of 2.
 
-### 3.3.3 Outputs
+### 3.5.3 Outputs
 
 **f/2<sup>8</sup>** is the output for the 2 Hz signal that is the frequency of the blinking state, while **f/2<sup>14</sup>** is the output for the 128 Hz signal that is the frequency of the dim state.
 
-### 3.3.4 Schematic
+### 3.5.4 Schematic
 
 ![Frequency divider](images/frequencyDivider.png)
 
-### 3.3.5 Cost
+### 3.5.5 Cost
 
 | Subcomponent                | Cost per | # Used | Total |
 | ----                        | ---      | ---    | ---   |
 | Positive Edge Triggered DFF | 13       | 14     | 182   |
 |                             |          |        | 182   |
 
-## 3.4 4 to 1 Bit Multiplexer
+## 3.6 4 to 1 Bit Multiplexer
 
-### 3.4.1 Specification
+### 3.6.1 Specification
 
 This is a mux which chooses, based off of a 2 bit binary decoded address, which of four input signals to output.
 
-### 3.4.2 Inputs
+### 3.6.2 Inputs
 
 **Addr0** and **Addr1** are the binary encoded address bits, while **in0**, **in1**, **in2**, and **in3** are the inputs being chosen from.
 
-### 3.4.3 Outputs
+### 3.6.3 Outputs
 
 **out** is the output signal.
 
-### 3.4.4 Schematic
+### 3.6.4 Schematic
 
 ![4:1 Mux](images/4to1mux.png)
 
-### 3.4.5 Cost
+### 3.6.5 Cost
 
 | Subcomponent     | Cost per | # Used | Total |
 | ----             | ----     | ---    | ---   |
